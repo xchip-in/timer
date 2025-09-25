@@ -84,17 +84,66 @@
         body:hover .fullscreen-btn {
             opacity: 1;
         }
+
+        .presets {
+            margin-top: 1vh;
+            display: flex;
+            gap: 1rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .container:hover .presets {
+            opacity: 1;
+        }
+
+        .preset-btn {
+            background: #002200;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .preset-btn:hover {
+            background: #004400;
+        }
+
+        .session-counter {
+            margin-top: 1vh;
+            font-size: 2rem;
+            opacity: 0.8;
+        }
+
+        .break-mode {
+            background: #000044 !important;
+            color: #4444ff !important;
+        }
+
+        .break-mode .timer-display {
+            color: #4444ff !important;
+            text-shadow: 0 0 50px #4444ff !important;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="timer-display" id="timerDisplay">00:00</div>
         <div class="status" id="status">Ready to start</div>
+        <div class="session-counter" id="sessionCounter">Sessions: 0</div>
         <div class="controls">
             <button id="startBtn">Start</button>
             <button id="pauseBtn">Pause</button>
             <button id="resetBtn">Reset</button>
             <button id="setTimeBtn">Set Time</button>
+        </div>
+        <div class="presets">
+            <button class="preset-btn" data-minutes="25">25min Study</button>
+            <button class="preset-btn" data-minutes="5">5min Break</button>
+            <button class="preset-btn" data-minutes="15">15min Break</button>
         </div>
     </div>
     <button class="fullscreen-btn" id="fullscreenBtn">Fullscreen</button>
@@ -103,9 +152,14 @@
         let timerInterval;
         let totalSeconds = 0;
         let isRunning = false;
+        let isCountdown = false;
+        let initialTime = 0;
+        let sessionCount = 0;
+        let isBreakTime = false;
 
         const timerDisplay = document.getElementById('timerDisplay');
         const status = document.getElementById('status');
+        const sessionCounter = document.getElementById('sessionCounter');
         const startBtn = document.getElementById('startBtn');
         const pauseBtn = document.getElementById('pauseBtn');
         const resetBtn = document.getElementById('resetBtn');
@@ -127,12 +181,52 @@
             timerDisplay.textContent = formatTime(totalSeconds);
         }
 
+        function playBeep() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 1);
+        }
+
         function startTimer() {
             if (!isRunning) {
                 isRunning = true;
-                status.textContent = 'Running';
+                status.textContent = isCountdown ? 'Countdown Running' : 'Running';
                 timerInterval = setInterval(() => {
-                    totalSeconds++;
+                    if (isCountdown) {
+                        totalSeconds--;
+                        if (totalSeconds <= 0) {
+                            totalSeconds = 0;
+                            pauseTimer();
+                            playBeep();
+
+                            if (isBreakTime) {
+                                status.textContent = 'Break over! Back to study';
+                                document.body.classList.remove('break-mode');
+                                isBreakTime = false;
+                            } else {
+                                sessionCount++;
+                                sessionCounter.textContent = `Sessions: ${sessionCount}`;
+                                status.textContent = 'Study session complete! Take a break';
+                                document.body.classList.add('break-mode');
+                                isBreakTime = true;
+                                totalSeconds = 5 * 60;
+                                updateDisplay();
+                                setTimeout(() => startTimer(), 2000);
+                            }
+                        }
+                    } else {
+                        totalSeconds++;
+                    }
                     updateDisplay();
                 }, 1000);
             }
@@ -176,6 +270,20 @@
         resetBtn.addEventListener('click', resetTimer);
         setTimeBtn.addEventListener('click', setTime);
         fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const minutes = parseInt(btn.dataset.minutes);
+                totalSeconds = minutes * 60;
+                initialTime = totalSeconds;
+                isCountdown = true;
+                status.textContent = `Set to ${minutes} minutes (countdown)`;
+                updateDisplay();
+                if (isRunning) {
+                    pauseTimer();
+                }
+            });
+        });
 
         document.addEventListener('keydown', (e) => {
             switch(e.code) {
