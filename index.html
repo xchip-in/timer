@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Timer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', monospace;
+            background: #000;
+            color: #00ff00;
+            overflow: hidden;
+            cursor: none;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .timer-display {
+            font-size: 25vw;
+            font-weight: bold;
+            letter-spacing: 0.1em;
+            text-shadow: 0 0 50px #00ff00;
+            user-select: none;
+        }
+
+        .controls {
+            margin-top: 2vh;
+            display: flex;
+            gap: 2rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .container:hover .controls {
+            opacity: 1;
+        }
+
+        button {
+            background: #333;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .status {
+            margin-top: 1vh;
+            font-size: 3rem;
+            opacity: 0.7;
+        }
+
+        .fullscreen-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(51, 51, 51, 0.8);
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        body:hover .fullscreen-btn {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="timer-display" id="timerDisplay">00:00</div>
+        <div class="status" id="status">Ready to start</div>
+        <div class="controls">
+            <button id="startBtn">Start</button>
+            <button id="pauseBtn">Pause</button>
+            <button id="resetBtn">Reset</button>
+            <button id="setTimeBtn">Set Time</button>
+        </div>
+    </div>
+    <button class="fullscreen-btn" id="fullscreenBtn">Fullscreen</button>
+
+    <script>
+        let timerInterval;
+        let totalSeconds = 0;
+        let isRunning = false;
+
+        const timerDisplay = document.getElementById('timerDisplay');
+        const status = document.getElementById('status');
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const setTimeBtn = document.getElementById('setTimeBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+        function formatTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+
+            if (hours > 0) {
+                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+            return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateDisplay() {
+            timerDisplay.textContent = formatTime(totalSeconds);
+        }
+
+        function startTimer() {
+            if (!isRunning) {
+                isRunning = true;
+                status.textContent = 'Running';
+                timerInterval = setInterval(() => {
+                    totalSeconds++;
+                    updateDisplay();
+                }, 1000);
+            }
+        }
+
+        function pauseTimer() {
+            if (isRunning) {
+                isRunning = false;
+                status.textContent = 'Paused';
+                clearInterval(timerInterval);
+            }
+        }
+
+        function resetTimer() {
+            isRunning = false;
+            totalSeconds = 0;
+            status.textContent = 'Ready to start';
+            clearInterval(timerInterval);
+            updateDisplay();
+        }
+
+        function setTime() {
+            const minutes = prompt('Enter study time in minutes:', '25');
+            if (minutes && !isNaN(minutes) && minutes > 0) {
+                totalSeconds = parseInt(minutes) * 60;
+                status.textContent = `Set to ${minutes} minutes`;
+                updateDisplay();
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        startBtn.addEventListener('click', startTimer);
+        pauseBtn.addEventListener('click', pauseTimer);
+        resetBtn.addEventListener('click', resetTimer);
+        setTimeBtn.addEventListener('click', setTime);
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+        document.addEventListener('keydown', (e) => {
+            switch(e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    isRunning ? pauseTimer() : startTimer();
+                    break;
+                case 'KeyR':
+                    resetTimer();
+                    break;
+                case 'KeyF':
+                    toggleFullscreen();
+                    break;
+                case 'KeyS':
+                    setTime();
+                    break;
+            }
+        });
+
+        updateDisplay();
+    </script>
+</body>
+</html>
