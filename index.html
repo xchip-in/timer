@@ -44,7 +44,8 @@
             transition: opacity 0.3s ease;
         }
 
-        .container:hover .controls {
+        .container:hover .controls,
+        body.fullscreen .controls {
             opacity: 1;
         }
 
@@ -82,6 +83,39 @@
         }
 
         body:hover .fullscreen-btn {
+            opacity: 1;
+        }
+
+        body.fullscreen .fullscreen-btn,
+        body.fullscreen .controls,
+        body.fullscreen .presets {
+            opacity: 0 !important;
+        }
+
+        body.hide-controls .controls,
+        body.hide-controls .presets,
+        body.hide-controls .fullscreen-btn,
+        body.hide-controls .session-counter,
+        body.hide-controls .status {
+            opacity: 0 !important;
+        }
+
+        .hide-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(51, 51, 51, 0.8);
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        body:hover .hide-btn {
             opacity: 1;
         }
 
@@ -147,6 +181,7 @@
         </div>
     </div>
     <button class="fullscreen-btn" id="fullscreenBtn">Fullscreen</button>
+    <button class="hide-btn" id="hideBtn">Hide</button>
 
     <script>
         let timerInterval;
@@ -165,6 +200,8 @@
         const resetBtn = document.getElementById('resetBtn');
         const setTimeBtn = document.getElementById('setTimeBtn');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const hideBtn = document.getElementById('hideBtn');
+        let controlsHidden = false;
 
         function formatTime(seconds) {
             const hours = Math.floor(seconds / 3600);
@@ -260,8 +297,21 @@
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen();
+                document.body.classList.add('fullscreen');
             } else {
                 document.exitFullscreen();
+                document.body.classList.remove('fullscreen');
+            }
+        }
+
+        function toggleHideControls() {
+            controlsHidden = !controlsHidden;
+            if (controlsHidden) {
+                document.body.classList.add('hide-controls');
+                hideBtn.textContent = 'Show';
+            } else {
+                document.body.classList.remove('hide-controls');
+                hideBtn.textContent = 'Hide';
             }
         }
 
@@ -270,6 +320,7 @@
         resetBtn.addEventListener('click', resetTimer);
         setTimeBtn.addEventListener('click', setTime);
         fullscreenBtn.addEventListener('click', toggleFullscreen);
+        hideBtn.addEventListener('click', toggleHideControls);
 
         document.querySelectorAll('.preset-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -295,11 +346,23 @@
                     resetTimer();
                     break;
                 case 'KeyF':
+                case 'F11':
                     toggleFullscreen();
                     break;
                 case 'KeyS':
                     setTime();
                     break;
+                case 'KeyH':
+                    toggleHideControls();
+                    break;
+            }
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                document.body.classList.add('fullscreen');
+            } else {
+                document.body.classList.remove('fullscreen');
             }
         });
 
