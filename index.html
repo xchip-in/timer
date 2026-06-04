@@ -12,7 +12,7 @@
         }
 
         body {
-            font-family: 'Courier New', Courier, monospace;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
             background: #000;
             color: #00ff00;
             overflow: hidden;
@@ -31,11 +31,11 @@
         }
 
         .timer-display {
-            font-size: clamp(4rem, 20vw, 25rem);
-            font-weight: bold;
+            font-size: clamp(3rem, 12vw, 15rem); /* Reduced from 20vw to 12vw to fit the longer MM:SS.ms format */
+            font-weight: 900; /* Increased from bold to 900 for maximum boldness */
             line-height: 1;
-            letter-spacing: 0.1em;
-            margin-right: -0.1em; /* Compensate for letter-spacing for perfect centering */
+            letter-spacing: 0.05em; /* Slightly reduced letter spacing for the longer string */
+            margin-right: -0.05em;
             text-shadow: 0 0 40px #00ff00;
             user-select: none;
         }
@@ -43,7 +43,7 @@
         /* Landscape Optimization for Mobile */
         @media (max-height: 500px) and (orientation: landscape) {
             .timer-display {
-                font-size: clamp(3rem, 15vh, 15rem);
+                font-size: clamp(2.5rem, 15vh, 10rem);
             }
             .controls {
                 margin-top: 1rem;
@@ -62,7 +62,7 @@
         /* Small Phone Portrait Optimization */
         @media (max-width: 400px) {
             .timer-display {
-                font-size: clamp(4rem, 22vw, 10rem);
+                font-size: clamp(2.5rem, 14vw, 8rem); /* Reduced from 22vw to 14vw to fit the 8-character string */
             }
             .controls {
                 margin-top: 2rem;
@@ -208,10 +208,10 @@
 
     <script>
         let timerInterval;
-        let totalSeconds = 0; // Default to 0
+        let totalMilliseconds = 0; // Default to 0
         let isRunning = false;
         let isCountdown = false; // Default to count up
-        let initialTime = 0;
+        let lastTime = 0;
         let isBreakTime = false;
 
         const timerDisplay = document.getElementById('timerDisplay');
@@ -223,19 +223,25 @@
         const hideBtn = document.getElementById('hideBtn');
         let controlsHidden = false;
 
-        function formatTime(seconds) {
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const secs = seconds % 60;
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const secs = totalSeconds % 60;
+            const milliseconds = Math.floor((ms % 1000) / 10); // 2 digits for ms
+
+            const msStr = milliseconds.toString().padStart(2, '0');
+            const secStr = secs.toString().padStart(2, '0');
+            const minStr = minutes.toString().padStart(2, '0');
 
             if (hours > 0) {
-                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                return `${hours.toString().padStart(2, '0')}:${minStr}:${secStr}.${msStr}`;
             }
-            return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            return `${minStr}:${secStr}.${msStr}`;
         }
 
         function updateDisplay() {
-            timerDisplay.textContent = formatTime(totalSeconds);
+            timerDisplay.textContent = formatTime(totalMilliseconds);
         }
 
         function playAlarm() {
@@ -262,31 +268,36 @@
         function startTimer() {
             if (!isRunning) {
                 isRunning = true;
+                lastTime = Date.now();
                 timerInterval = setInterval(() => {
+                    const now = Date.now();
+                    const delta = now - lastTime;
+                    lastTime = now;
+
                     if (isCountdown) {
-                        totalSeconds--;
-                        if (totalSeconds <= 0) {
-                            totalSeconds = 0;
+                        totalMilliseconds -= delta;
+                        if (totalMilliseconds <= 0) {
+                            totalMilliseconds = 0;
                             pauseTimer();
                             playAlarm();
 
                             if (isBreakTime) {
                                 isBreakTime = false;
-                                totalSeconds = 25 * 60;
+                                totalMilliseconds = 25 * 60 * 1000;
                                 isCountdown = true;
                                 updateDisplay();
                             } else {
                                 isBreakTime = true;
-                                totalSeconds = 5 * 60;
+                                totalMilliseconds = 5 * 60 * 1000;
                                 updateDisplay();
                                 setTimeout(() => startTimer(), 2000);
                             }
                         }
                     } else {
-                        totalSeconds++;
+                        totalMilliseconds += delta;
                     }
                     updateDisplay();
-                }, 1000);
+                }, 16); // Roughly 60fps update rate
             }
         }
 
@@ -299,7 +310,7 @@
 
         function resetTimer() {
             pauseTimer();
-            totalSeconds = 0;
+            totalMilliseconds = 0;
             isCountdown = false;
             updateDisplay();
         }
@@ -308,7 +319,7 @@
             const minutes = prompt('Enter study time in minutes:', '25');
             if (minutes && !isNaN(minutes) && minutes > 0) {
                 pauseTimer();
-                totalSeconds = parseInt(minutes) * 60;
+                totalMilliseconds = parseInt(minutes) * 60 * 1000;
                 isCountdown = true;
                 updateDisplay();
                 startTimer(); // Auto-start after setting time
@@ -316,11 +327,17 @@
         }
 
         function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
+            const doc = window.document;
+            const docEl = doc.documentElement;
+
+            const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+            const cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+
+            if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+                if (requestFullScreen) requestFullScreen.call(docEl);
                 document.body.classList.add('fullscreen');
             } else {
-                document.exitFullscreen();
+                if (cancelFullScreen) cancelFullScreen.call(doc);
                 document.body.classList.remove('fullscreen');
             }
         }
@@ -347,8 +364,7 @@
             btn.addEventListener('click', () => {
                 pauseTimer();
                 const minutes = parseInt(btn.dataset.minutes);
-                totalSeconds = minutes * 60;
-                initialTime = totalSeconds;
+                totalMilliseconds = minutes * 60 * 1000;
                 isCountdown = true;
                 updateDisplay();
                 startTimer(); // Auto-start when preset selected
@@ -377,12 +393,15 @@
             }
         });
 
-        document.addEventListener('fullscreenchange', () => {
-            if (document.fullscreenElement) {
-                document.body.classList.add('fullscreen');
-            } else {
-                document.body.classList.remove('fullscreen');
-            }
+        ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(eventName => {
+            document.addEventListener(eventName, () => {
+                const doc = window.document;
+                if (doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement) {
+                    document.body.classList.add('fullscreen');
+                } else {
+                    document.body.classList.remove('fullscreen');
+                }
+            });
         });
 
         updateDisplay();
