@@ -123,7 +123,6 @@
             opacity: 1;
         }
 
-        body.fullscreen .fullscreen-btn,
         body.fullscreen .controls,
         body.fullscreen .presets {
             opacity: 0 !important;
@@ -398,8 +397,10 @@
                 const doc = window.document;
                 if (doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement) {
                     document.body.classList.add('fullscreen');
+                    fullscreenBtn.textContent = 'Exit Fullscreen';
                 } else {
                     document.body.classList.remove('fullscreen');
+                    fullscreenBtn.textContent = 'Fullscreen';
                 }
             });
         });
