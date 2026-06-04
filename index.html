@@ -12,11 +12,11 @@
         }
 
         body {
-            font-family: 'Arial', monospace;
+            font-family: 'Courier New', Courier, monospace;
             background: #000;
             color: #00ff00;
             overflow: hidden;
-            cursor: none;
+            cursor: default; /* Changed from none to make it usable */
         }
 
         .container {
@@ -26,22 +26,63 @@
             align-items: center;
             height: 100vh;
             width: 100vw;
+            text-align: center;
+            padding: 1rem;
         }
 
         .timer-display {
-            font-size: 25vw;
+            font-size: clamp(4rem, 20vw, 25rem);
             font-weight: bold;
+            line-height: 1;
             letter-spacing: 0.1em;
-            text-shadow: 0 0 50px #00ff00;
+            margin-right: -0.1em; /* Compensate for letter-spacing for perfect centering */
+            text-shadow: 0 0 40px #00ff00;
             user-select: none;
         }
 
+        /* Landscape Optimization for Mobile */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .timer-display {
+                font-size: clamp(3rem, 15vh, 15rem);
+            }
+            .controls {
+                margin-top: 1rem;
+                gap: 0.8rem;
+            }
+            .presets {
+                margin-top: 1rem;
+                gap: 0.5rem;
+            }
+            button {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Small Phone Portrait Optimization */
+        @media (max-width: 400px) {
+            .timer-display {
+                font-size: clamp(4rem, 22vw, 10rem);
+            }
+            .controls {
+                margin-top: 2rem;
+                gap: 1rem;
+            }
+            button {
+                padding: 0.6rem 1.2rem;
+                font-size: 1rem;
+            }
+        }
+
         .controls {
-            margin-top: 2vh;
+            margin-top: 3rem;
             display: flex;
-            gap: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1.5rem;
             opacity: 0;
             transition: opacity 0.3s ease;
+            max-width: 95vw;
         }
 
         .container:hover .controls,
@@ -53,22 +94,17 @@
             background: #333;
             color: #00ff00;
             border: 2px solid #00ff00;
-            padding: 1rem 2rem;
-            font-size: 1.2rem;
+            padding: 0.75rem 1.5rem;
+            font-size: 1.1rem;
             cursor: pointer;
             border-radius: 5px;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            white-space: nowrap;
         }
 
         button:hover {
             background: #00ff00;
             color: #000;
-        }
-
-        .status {
-            margin-top: 1vh;
-            font-size: 3rem;
-            opacity: 0.7;
         }
 
         .fullscreen-btn {
@@ -77,9 +113,10 @@
             right: 20px;
             background: rgba(51, 51, 51, 0.8);
             padding: 0.5rem 1rem;
-            font-size: 1rem;
+            font-size: 0.9rem;
             opacity: 0;
             transition: opacity 0.3s ease;
+            z-index: 100;
         }
 
         body:hover .fullscreen-btn {
@@ -108,11 +145,12 @@
             color: #00ff00;
             border: 2px solid #00ff00;
             padding: 0.5rem 1rem;
-            font-size: 1rem;
+            font-size: 0.9rem;
             cursor: pointer;
             border-radius: 5px;
             opacity: 0;
             transition: opacity 0.3s ease;
+            z-index: 100;
         }
 
         body:hover .hide-btn {
@@ -120,11 +158,14 @@
         }
 
         .presets {
-            margin-top: 1vh;
+            margin-top: 2rem;
             display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 1rem;
             opacity: 0;
             transition: opacity 0.3s ease;
+            max-width: 90vw;
         }
 
         .container:hover .presets {
@@ -135,21 +176,15 @@
             background: #002200;
             color: #00ff00;
             border: 1px solid #00ff00;
-            padding: 0.5rem 1rem;
-            font-size: 1rem;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.9rem;
             cursor: pointer;
             border-radius: 3px;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
 
         .preset-btn:hover {
             background: #004400;
-        }
-
-        .session-counter {
-            margin-top: 1vh;
-            font-size: 2rem;
-            opacity: 0.8;
         }
 
         .break-mode {
@@ -159,15 +194,13 @@
 
         .break-mode .timer-display {
             color: #4444ff !important;
-            text-shadow: 0 0 50px #4444ff !important;
+            text-shadow: 0 0 40px #4444ff !important;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="timer-display" id="timerDisplay">00:00</div>
-        <div class="status" id="status">Ready to start</div>
-        <div class="session-counter" id="sessionCounter">Sessions: 0</div>
         <div class="controls">
             <button id="startBtn">Start</button>
             <button id="pauseBtn">Pause</button>
@@ -185,16 +218,13 @@
 
     <script>
         let timerInterval;
-        let totalSeconds = 0;
+        let totalSeconds = 0; // Default to 0
         let isRunning = false;
-        let isCountdown = false;
+        let isCountdown = false; // Default to count up
         let initialTime = 0;
-        let sessionCount = 0;
         let isBreakTime = false;
 
         const timerDisplay = document.getElementById('timerDisplay');
-        const status = document.getElementById('status');
-        const sessionCounter = document.getElementById('sessionCounter');
         const startBtn = document.getElementById('startBtn');
         const pauseBtn = document.getElementById('pauseBtn');
         const resetBtn = document.getElementById('resetBtn');
@@ -237,7 +267,6 @@
         function startTimer() {
             if (!isRunning) {
                 isRunning = true;
-                status.textContent = isCountdown ? 'Countdown Running' : 'Running';
                 timerInterval = setInterval(() => {
                     if (isCountdown) {
                         totalSeconds--;
@@ -247,13 +276,13 @@
                             playBeep();
 
                             if (isBreakTime) {
-                                status.textContent = 'Break over! Back to study';
                                 document.body.classList.remove('break-mode');
                                 isBreakTime = false;
+                                // Reset to default study time after break
+                                totalSeconds = 25 * 60;
+                                isCountdown = true;
+                                updateDisplay();
                             } else {
-                                sessionCount++;
-                                sessionCounter.textContent = `Sessions: ${sessionCount}`;
-                                status.textContent = 'Study session complete! Take a break';
                                 document.body.classList.add('break-mode');
                                 isBreakTime = true;
                                 totalSeconds = 5 * 60;
@@ -272,25 +301,25 @@
         function pauseTimer() {
             if (isRunning) {
                 isRunning = false;
-                status.textContent = 'Paused';
                 clearInterval(timerInterval);
             }
         }
 
         function resetTimer() {
-            isRunning = false;
+            pauseTimer();
             totalSeconds = 0;
-            status.textContent = 'Ready to start';
-            clearInterval(timerInterval);
+            isCountdown = false;
             updateDisplay();
         }
 
         function setTime() {
             const minutes = prompt('Enter study time in minutes:', '25');
             if (minutes && !isNaN(minutes) && minutes > 0) {
+                pauseTimer();
                 totalSeconds = parseInt(minutes) * 60;
-                status.textContent = `Set to ${minutes} minutes`;
+                isCountdown = true;
                 updateDisplay();
+                startTimer(); // Auto-start after setting time
             }
         }
 
@@ -324,15 +353,13 @@
 
         document.querySelectorAll('.preset-btn').forEach(btn => {
             btn.addEventListener('click', () => {
+                pauseTimer();
                 const minutes = parseInt(btn.dataset.minutes);
                 totalSeconds = minutes * 60;
                 initialTime = totalSeconds;
                 isCountdown = true;
-                status.textContent = `Set to ${minutes} minutes (countdown)`;
                 updateDisplay();
-                if (isRunning) {
-                    pauseTimer();
-                }
+                startTimer(); // Auto-start when preset selected
             });
         });
 
